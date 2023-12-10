@@ -22,12 +22,13 @@ import random
 # the notebook
 # what you've shown
 
-class Board:
+#class Board:
 
-    def __init__(self):
+#    def __init__(self):
         #self.playerOrder = players in game (start w miss scarlet)
 
-    def showBoard(self):
+ #   def showBoard(self):
+ #       ...
 
 
 class Player:
@@ -35,15 +36,20 @@ class Player:
     def __init__(self, name, location):
         self.name = name
         self.location = location
-        #self.notebook = self.createNotebook()
+        #self.notebook = self.createNotebook(deck)
         #self.hand = random cards from deck
 
-    def createNotebook(self, deck, game):
+    def createNotebook(self, deck):
         notebook = {}
-        for card in deck:
-            for player in game:
-                notebook[card][player] = " "
+        for card in deck.fresh_deck:
+            notebook[card] = {}
+            for player in deck.playercards:
+                notebook[card][player] = ''
         return notebook
+
+    def displayNotebook(self, notebook):
+        for card in deck.fresh_deck:
+            print(card, notebook[card])
 
     def updateNotebook(self):
         ...
@@ -54,8 +60,21 @@ class Player:
     def getHand(self):
         ...
 
-    def move(self):
-        ...
+    def moveTo(self, newLocation):
+        self.location.players.remove(self)
+        newLocation.players.append(self)
+        self.location = newLocation
+
+    def go(self, direction):
+        if direction not in self.location.paths:
+            print(f"I don't see how to go {direction} from here.")
+        else:
+            destination = self.location.paths[direction]
+            if not destination.accepts(self):
+                print(f"I'm not allowed to go to {destination}")
+            else:
+                print(f"{self} moves from {self.location} to {destination}")
+                self.moveTo(destination)
 
     def playerTurn(self):
         # need to include something about moving
@@ -75,7 +94,7 @@ class Player:
     def suggest(self,player,room,weapon):
         return [player,room,weapon]
 
-    def gatherResponses(self,suggestion, players):
+    def gatherResponses(self, suggestion, players):
         for player in players:
             options = [card in player.hand if card in suggestion]
         # if player not human, random.choice(options) (or something smarter)
@@ -181,12 +200,6 @@ corridor4 = Place("Corridor")
 
 
 #initialize notebook:
-notebook = {}
-for card in deck.fresh_deck:
-    notebook[card] = {}
-    for player in deck.playercards:
-        notebook[card][player] = ''
-
         
 notebook['Rope']['Miss Scarlet'] = 'x'
 notebook['Colonel Mustard']['Miss Scarlet'] = 'x'
@@ -234,3 +247,24 @@ def ready_to_accuse():
 ##  Lead Pipe     o     o       o       o
 ##  Wrench        o     x       o       o
 ##  Candlestick   o     o       o       o
+
+# connecting the board
+
+corridor1.connect("south", corridor2)
+corridor2.connect("south", corridor3)
+corridor3.connect("south", corridor4)
+
+corridor1.connect("east", lounge)
+corridor1.connect("west", study)
+
+corridor2.connect("east", library)
+corridor2.connect("west", diningRoom)
+
+corridor3.connect("east", ballroom)
+corridor3.connect("west", billiardRoom)
+
+corridor4.connect("east", kitchen)
+corridor4.connect("west", conservatory)
+
+lounge.connect("secret passage", conservatory)
+study.connect("secret passage", kitchen)
