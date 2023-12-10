@@ -25,6 +25,7 @@ import random
 #class Board:
 
 #    def __init__(self):
+#        self.rooms =
         #self.playerOrder = players in game (start w miss scarlet)
 
  #   def showBoard(self):
@@ -36,8 +37,12 @@ class Player:
     def __init__(self, name, location):
         self.name = name
         self.location = location
-        #self.notebook = self.createNotebook(deck)
+        self.location.players.append(self)
+        self.notebook = self.createNotebook(deck)
         #self.hand = random cards from deck
+
+    def __str__(self):
+        return self.name
 
     def createNotebook(self, deck):
         notebook = {}
@@ -51,8 +56,9 @@ class Player:
         for card in deck.fresh_deck:
             print(card, notebook[card])
 
-    def updateNotebook(self):
-        ...
+    def updateNotebook(self,symbol):
+        self.notebook[card][player] = symbol
+        return self.notebook
 
     def getInfo(self):
         ...
@@ -70,15 +76,17 @@ class Player:
             print(f"I don't see how to go {direction} from here.")
         else:
             destination = self.location.paths[direction]
-            if not destination.accepts(self):
-                print(f"I'm not allowed to go to {destination}")
-            else:
-                print(f"{self} moves from {self.location} to {destination}")
-                self.moveTo(destination)
+            #if not destination.accepts(self):
+            #    print(f"I'm not allowed to go to {destination}")
+            #else:
+            print(f"{self} moves from {self.location} to {destination}")
+            self.moveTo(destination)
 
     def playerTurn(self):
         # need to include something about moving
         # after entering a new location:
+        direction = input(f"it is your turn, {self.name}! which direction would you like to move?")
+        self.go(direction)
         if input("would you like to make a suggestion (type 'yes' if so)?") == "yes" or "Yes":
             suspect = input("which character would you like to suggest?")
             weapon = input("what weapon did they use?")
@@ -95,8 +103,8 @@ class Player:
         return [player,room,weapon]
 
     def gatherResponses(self, suggestion, players):
-        for player in players:
-            options = [card in player.hand if card in suggestion]
+#        for player in players:
+#            options = [card in player.hand if card in suggestion]
         # if player not human, random.choice(options) (or something smarter)
         if len(options) > 1:
             print(f"you have {options}. which card would you like to show active player")
@@ -135,10 +143,10 @@ class Deck:
         self.deck.remove(weapon)
         return [player,room,weapon]
 
-    def dealCards(self,numPlayers):
-        for i in range(len(self.deck)//numPlayers):
+#    def dealCards(self,numPlayers):
+#        for i in range(len(self.deck)//numPlayers):
             # player.hand = sel
-        ...
+#        ...
 
 deck = Deck()
 envelope = deck.prepPerp(random.choice(deck.playercards),random.choice(deck.roomcards),random.choice(deck.weaponcards))
@@ -150,7 +158,7 @@ class Place:
     def __init__(self, name):
         self.name = name
         self.paths = {}
-        self.beings = []
+        self.players = []
         self.unownedThings = []
 
     def __str__(self):
