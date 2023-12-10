@@ -28,7 +28,7 @@ class Board:
         #self.playerOrder = players in game (start w miss scarlet)
 
     def showBoard(self):
-        ...
+
 
 class Player:
 
@@ -104,6 +104,7 @@ class Deck:
         self.roomcards = ["Study", "Kitchen", "Ballroom", "Conservatory", "Billiard Room",
                           "Library", "Hall", "Lounge", "Dining Room"]
         self.weaponcards = ["Candlestick", "Dagger", "Revolver", "Lead pipe", "Wrench", "Rope"]
+        self.fresh_deck = self.playercards + self.roomcards + self.weaponcards
         self.deck = self.playercards + self.roomcards + self.weaponcards
         print(self.deck)
         #self.
@@ -178,10 +179,44 @@ corridor2 = Place("Corridor")
 corridor3 = Place("Corridor")
 corridor4 = Place("Corridor")
 
-#notebook = {}
 
-#create notebook:
+#initialize notebook:
+notebook = {}
+for card in deck.fresh_deck:
+    notebook[card] = {}
+    for player in deck.playercards:
+        notebook[card][player] = ''
 
+        
+notebook['Rope']['Miss Scarlet'] = 'x'
+notebook['Colonel Mustard']['Miss Scarlet'] = 'x'
+notebook['Colonel Mustard']['Mr. Green'] = 'o'
+notebook['Mr. Green']['Colonel Mustard']
+notebook['Colonel Mustard']['Miss Scarlet'] 
+notebook['Colonel Mustard']['Mr. Green']
+notebook
+
+
+notebook['Colonel Mustard']['Miss Scarlet'] = 'o'
+notebook['Colonel Mustard']['Mr. Green'] = 'o'
+notebook['Colonel Mustard']['Colonel Mustard'] = 'o'
+notebook['Colonel Mustard']['Prof. Plum'] = 'o'
+notebook['Colonel Mustard']['Mrs. White'] = 'o'
+notebook['Colonel Mustard']['Mrs. Peacock'] = 'o'
+
+
+def ready_to_accuse():
+    no_one = {}
+    for card in deck.fresh_deck:
+        no_one[card]=0
+        for player in deck.playercards:
+            if notebook[card][player] == 'o':
+                no_one[card] = no_one[card] + 1
+        if no_one[card] == 6:
+            print(card)
+
+
+        
 #for card in deck:
 #   for player in game:
 #       notebook[card][player] = "x" or "o" depending
