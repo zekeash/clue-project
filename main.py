@@ -17,6 +17,21 @@ import random
 public_log = []
 
 # player who asked what -> player who responded, if anyone. players who didn't respond.
+gameOver = True
+
+
+def main():
+    # setup goes here
+    #playerOrder = playerList
+    gameOver = False
+    # enter some rules
+
+    #beginning of the turn
+    while gameOver == False:
+        for player in playerList:
+            player.playerTurn()
+            for player in playerList:
+                print(player.name)
 
 ## private log
 
@@ -106,7 +121,9 @@ You are in {self.location}!""")
             # move suspect to location
             weapon = input("what weapon did they use?")
             # case insensitive
-            self.gatherResponses([suspect_object.name, self.location.name, weapon], playerList)
+            otherPlayers = playerList
+            otherPlayers.remove(self)
+            self.gatherResponses([suspect_object.name, self.location.name, weapon], otherPlayers)
             # has someone responded? == False
             # for player in list (if HSR? == False)
                 # chance to respond
@@ -114,8 +131,7 @@ You are in {self.location}!""")
         # if no offer to accuse
 
     def gatherResponses(self, suggestion, players):
-
-        for player in players if player.name != self.name:
+        for player in players:
             options = []
             for card in player.hand:
                 if card in suggestion:
@@ -148,7 +164,7 @@ Which card would you like to show {self.name}?""")
         for card in deck.fresh_deck:
             no_one[card] = 0
             for player in deck.playercards:
-                if notebook[card][player] == 'o':
+                if player.notebook[card][player] == 'o':
                     no_one[card] = no_one[card] + 1
             if no_one[card] == 6:
                 print(card)
@@ -295,7 +311,7 @@ def get_object_by_name(object_name):
 #plum.notebook['Colonel Mustard']['Prof. Plum'] = 'o'
 #plum.notebook['Colonel Mustard']['Mrs. White'] = 'o'
 #plum.notebook['Colonel Mustard']['Mrs. Peacock'] = 'o'
-plum.displayNotebook()
+#plum.displayNotebook()
 
 
         
