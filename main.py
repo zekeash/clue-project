@@ -14,8 +14,7 @@ import random
 #       check middle
 
 ## jim suggests maybe making a setup or test command
-
-## public log
+public_log = []
 
 # player who asked what -> player who responded, if anyone. players who didn't respond.
 
@@ -41,7 +40,7 @@ class Player:
         self.location = location
         self.location.players.append(self)
         self.notebook = self.createNotebook(deck)
-        #self.hand = random cards from deck
+        self.hand = []
 
     def __str__(self):
         return self.name
@@ -54,11 +53,11 @@ class Player:
                 notebook[card][player] = ''
         return notebook
 
-    def displayNotebook(self, notebook):
+    def displayNotebook(self):
         for card in deck.fresh_deck:
-            print(card, notebook[card])
+            print(card, self.notebook[card])
 
-    def updateNotebook(self,symbol):
+    def updateNotebook(self,card,player,symbol):
         self.notebook[card][player] = symbol
         return self.notebook
 
@@ -84,41 +83,75 @@ class Player:
             print(f"{self} moves from {self.location} to {destination}")
             self.moveTo(destination)
 
+    def suggest(self,player,room,weapon):
+        return [player,room,weapon]
+
     def playerTurn(self):
         # need to include something about moving
         # after entering a new location:
-        direction = input(f"it is your turn, {self.name}! which direction would you like to move?")
-        self.go(direction)
+        # tell player possible moves and current location
+        print(f"""It is your turn, {self.name}! 
+You are in {self.location}!""")
+        for direction in self.location.paths:
+            otherPlace = self.location.paths[direction]
+            print(f"  {direction} to {otherPlace}")
+        move = input("which direction would you like to move?")
+        self.go(move)
+        # check if you are in a room where you can suggest/accuse
         if input("would you like to make a suggestion (type 'yes' if so)?") == "yes" or "Yes":
-            suspect = input("which character would you like to suggest?")
+            suspect = input("which character would you like to suggest (simply type the color)?")
+            suspect_object = get_object_by_name(suspect)
+            suspect_object.moveTo(self.location)
+            print(f"{suspect_object} has been called to the {self.location}")
+            # move suspect to location
             weapon = input("what weapon did they use?")
             # case insensitive
-            suggestion = suggest(suspect, self.location, weapon)
-            self.gatherResponses(suggestion, playerList)
+            self.gatherResponses([suspect_object.name, self.location.name, weapon], playerList)
             # has someone responded? == False
             # for player in list (if HSR? == False)
                 # chance to respond
                 # if response, HSR? == True
         # if no offer to accuse
 
-    def suggest(self,player,room,weapon):
-        return [player,room,weapon]
-
     def gatherResponses(self, suggestion, players):
-#        for player in players:
-#            options = [card in player.hand if card in suggestion]
+
+        for player in players if player.name != self.name:
+            options = []
+            for card in player.hand:
+                if card in suggestion:
+                    options.append(card)
         # if player not human, random.choice(options) (or something smarter)
-        if len(options) > 1:
-            print(f"you have {options}. which card would you like to show active player")
-            # advise player they have previously shown {read from log}.
-            #allow for a choice if you have 2 or more of the suggestion
-            #report and write to log
-        elif len(options) == 1:
-            # show card
-            return options[0]
-        else:
-            print("you do not have the requested info")
-        ...
+            if len(options) > 1:
+                cue = input(f"{player}, you have some of the suggested cards. Press any key to choose one to show.")
+                print(options)
+                shownCard = input(f"""{self.name} suggested {suggestion}. You have {options}.
+Which card would you like to show {self.name}?""")
+                self.updateNotebook(shownCard, player.name, "x")
+                print(f"{player} shows the card {options[0]}.")
+                public_log.append(f"""{self.name} suggested, {suggestion}.
+{player.name} showed something""")
+                return shownCard
+            elif len(options) == 1:
+                print(f"{player} shows the card {options[0]}.")
+                self.updateNotebook(options[0],player.name,"x")
+                public_log.append(f"""{self.name} suggested, {suggestion}.
+{player.name} showed something""")
+                return options[0]
+            else:
+                print
+                print(f"{player} does not have the requested info")
+        public_log.append(f"""{self.name} suggested, {suggestion}.
+        Nobody knew nuthin'.""")
+
+    def ready_to_accuse(self):
+        no_one = {}
+        for card in deck.fresh_deck:
+            no_one[card] = 0
+            for player in deck.playercards:
+                if notebook[card][player] == 'o':
+                    no_one[card] = no_one[card] + 1
+            if no_one[card] == 6:
+                print(card)
 
     def accuse(self,suggestion):
         if suggestion == envelope:
@@ -135,7 +168,7 @@ class Deck:
         self.weaponcards = ["Candlestick", "Dagger", "Revolver", "Lead pipe", "Wrench", "Rope"]
         self.fresh_deck = self.playercards + self.roomcards + self.weaponcards
         self.deck = self.playercards + self.roomcards + self.weaponcards
-        print(self.deck)
+        #print(self.deck)
         #self.
 
     def prepPerp(self, player,room,weapon):
@@ -150,10 +183,6 @@ class Deck:
             # player.hand = sel
 #        ...
 
-deck = Deck()
-envelope = deck.prepPerp(random.choice(deck.playercards),random.choice(deck.roomcards),random.choice(deck.weaponcards))
-print(envelope)
-
 class Place:
 
     # constructor
@@ -161,7 +190,6 @@ class Place:
         self.name = name
         self.paths = {}
         self.players = []
-        self.unownedThings = []
 
     def __str__(self):
         return self.name
@@ -186,6 +214,11 @@ class Place:
                     'south': 'north', 'east': 'west', 'west': 'east'}
         destination.connectOneWay(opposite[direction], self)
 
+
+deck = Deck()
+envelope = deck.prepPerp(random.choice(deck.playercards),random.choice(deck.roomcards),random.choice(deck.weaponcards))
+print(envelope)
+
 scarletStart = Place("Miss Scarlet Start")
 mustardStart = Place("Colonel Mustard Start")
 greenStart = Place("Mr. Green Start")
@@ -208,35 +241,61 @@ corridor2 = Place("Corridor")
 corridor3 = Place("Corridor")
 corridor4 = Place("Corridor")
 
+scarlet = Player("Miss Scarlet", corridor1)
+peacock = Player("Miss Peacock", corridor2)
+mustard = Player("Colonel Mustard", corridor3)
+green = Player("Mr. Green", corridor3)
+white = Player("Mrs. White", corridor4)
+plum = Player("Prof. Plum", corridor1)
+
+playerList = {scarlet,peacock,plum,mustard,green,white}
+
+# dealing cards:
+
+for player in playerList:
+    for r in range(3):
+        card = random.choice(deck.deck)
+        player.hand.append(card)
+        deck.deck.remove(card)
+    print(f"{player}'s hand: {player.hand}")
+    for card in player.hand:
+        player.updateNotebook(card,player.name,"x")
+
 
 #initialize notebook:
+
+def get_object_by_name(object_name):
+    # Use globals() or locals() to access the global or local namespace
+    # In this example, we'll use globals()
+    global_namespace = globals()
+
+    # Check if the object with the given name exists in the global namespace
+    if object_name in global_namespace:
+        return global_namespace[object_name]
+    else:
+        return None
+
+#object_name_input = input("Enter the name of the object: ")
+#result_object = get_object_by_name(object_name_input)
+#print(result_object)
+#print(result_object.location)
         
-notebook['Rope']['Miss Scarlet'] = 'x'
-notebook['Colonel Mustard']['Miss Scarlet'] = 'x'
-notebook['Colonel Mustard']['Mr. Green'] = 'o'
-notebook['Mr. Green']['Colonel Mustard']
-notebook['Colonel Mustard']['Miss Scarlet'] 
-notebook['Colonel Mustard']['Mr. Green']
-notebook
+#plum.notebook['Rope']['Miss Scarlet'] = 'x'
+#plum.notebook['Colonel Mustard']['Miss Scarlet'] = 'x'
+#plum.notebook['Colonel Mustard']['Mr. Green'] = 'o'
+#plum.notebook['Mr. Green']['Colonel Mustard']
+#plum.notebook['Colonel Mustard']['Miss Scarlet']
+#plum.notebook['Colonel Mustard']['Mr. Green']
 
 
-notebook['Colonel Mustard']['Miss Scarlet'] = 'o'
-notebook['Colonel Mustard']['Mr. Green'] = 'o'
-notebook['Colonel Mustard']['Colonel Mustard'] = 'o'
-notebook['Colonel Mustard']['Prof. Plum'] = 'o'
-notebook['Colonel Mustard']['Mrs. White'] = 'o'
-notebook['Colonel Mustard']['Mrs. Peacock'] = 'o'
 
-
-def ready_to_accuse():
-    no_one = {}
-    for card in deck.fresh_deck:
-        no_one[card]=0
-        for player in deck.playercards:
-            if notebook[card][player] == 'o':
-                no_one[card] = no_one[card] + 1
-        if no_one[card] == 6:
-            print(card)
+#plum.notebook['Colonel Mustard']['Miss Scarlet'] = 'o'
+#plum.notebook['Colonel Mustard']['Mr. Green'] = 'o'
+#plum.notebook['Colonel Mustard']['Colonel Mustard'] = 'o'
+#plum.notebook['Colonel Mustard']['Prof. Plum'] = 'o'
+#plum.notebook['Colonel Mustard']['Mrs. White'] = 'o'
+#plum.notebook['Colonel Mustard']['Mrs. Peacock'] = 'o'
+plum.displayNotebook()
 
 
         
@@ -276,5 +335,5 @@ corridor3.connect("west", billiardRoom)
 corridor4.connect("east", kitchen)
 corridor4.connect("west", conservatory)
 
-lounge.connect("secret passage", conservatory)
-study.connect("secret passage", kitchen)
+#lounge.connect("secret passage", conservatory)
+#study.connect("secret passage", kitchen)
