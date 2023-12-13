@@ -13,6 +13,8 @@ import random
 #    if accuse:
 #       check middle
 
+## jim suggests maybe making a setup or test command
+
 ## public log
 
 # player who asked what -> player who responded, if anyone. players who didn't respond.
@@ -61,7 +63,7 @@ class Player:
         return self.notebook
 
     def getInfo(self):
-        ...
+        return f"I am {self.name}. I am currently in {self.location}."
 
     def getHand(self):
         ...
