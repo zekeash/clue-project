@@ -25,13 +25,11 @@ def main():
     #playerOrder = playerList
     gameOver = False
     # enter some rules
-
     #beginning of the turn
-    while gameOver == False:
-        for player in playerList:
+
+    for player in playerList.copy():
+        if gameOver == False:
             player.playerTurn()
-            for player in playerList:
-                print(player.name)
 
 ## private log
 
@@ -113,7 +111,10 @@ You are in {self.location}!""")
         move = input("which direction would you like to move?")
         self.go(move)
         # check if you are in a room where you can suggest/accuse
-        if input("would you like to make a suggestion (type 'yes' if so)?") == "yes" or "Yes":
+        suggestAction = input("would you like to make a suggestion (type 'yes' if so)?")
+        if suggestAction != "yes" or "Yes":
+            print("passing turn...")
+        else:
             suspect = input("which character would you like to suggest (simply type the color)?")
             suspect_object = get_object_by_name(suspect)
             suspect_object.moveTo(self.location)
@@ -121,9 +122,7 @@ You are in {self.location}!""")
             # move suspect to location
             weapon = input("what weapon did they use?")
             # case insensitive
-            otherPlayers = playerList
-            otherPlayers.remove(self)
-            self.gatherResponses([suspect_object.name, self.location.name, weapon], otherPlayers)
+            self.gatherResponses([suspect_object.name, self.location.name, weapon], playerList.copy())
             # has someone responded? == False
             # for player in list (if HSR? == False)
                 # chance to respond
@@ -131,6 +130,7 @@ You are in {self.location}!""")
         # if no offer to accuse
 
     def gatherResponses(self, suggestion, players):
+        players.remove(self)
         for player in players:
             options = []
             for card in player.hand:
@@ -154,7 +154,6 @@ Which card would you like to show {self.name}?""")
 {player.name} showed something""")
                 return options[0]
             else:
-                print
                 print(f"{player} does not have the requested info")
         public_log.append(f"""{self.name} suggested, {suggestion}.
         Nobody knew nuthin'.""")
