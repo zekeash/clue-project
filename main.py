@@ -16,20 +16,22 @@ import random
 ## jim suggests maybe making a setup or test command
 public_log = []
 
+g = {}
 # player who asked what -> player who responded, if anyone. players who didn't respond.
-gameOver = True
+
 
 
 def main():
     # setup goes here
     #playerOrder = playerList
-    gameOver = False
+    g['gameOver'] = False
     # enter some rules
     #beginning of the turn
-
-    for player in playerList.copy():
-        if gameOver == False:
-            player.playerTurn()
+    while not g['gameOver']:
+        for player in playerList.copy():
+            if not g['gameOver']:
+                if not player.eliminated:
+                    player.playerTurn()
 
 ## private log
 
@@ -48,12 +50,13 @@ def main():
 
 class Player:
 
-    def __init__(self, name, location):
+    def __init__(self, name, location, eliminated=False):
         self.name = name
         self.location = location
         self.location.players.append(self)
         self.notebook = self.createNotebook(deck)
         self.hand = []
+        self.eliminated = eliminated
 
     def __str__(self):
         return self.name
@@ -86,7 +89,9 @@ class Player:
         self.location = newLocation
 
     def go(self, direction):
-        if direction not in self.location.paths:
+        if direction == "none":
+            print(f"{self} remains in {self.location}")
+        elif direction not in self.location.paths:
             print(f"I don't see how to go {direction} from here.")
         else:
             destination = self.location.paths[direction]
@@ -111,18 +116,48 @@ You are in {self.location}!""")
         move = input("which direction would you like to move?")
         self.go(move)
         # check if you are in a room where you can suggest/accuse
-        suggestAction = input("would you like to make a suggestion (type 'yes' if so)?")
-        if suggestAction != "yes" or "Yes":
-            print("passing turn...")
+        if self.location.canSuggest:
+            suggestAction = input(f"""You have {self.hand} in your hand.
+Would you like to make a suggestion (type 'yes' if so)?""")
+            if suggestAction != "yes":
+                print("passing turn...")
+            else:
+                suspect = input("which character would you like to suggest (simply type the color)?")
+                suspect_object = get_object_by_name(suspect)
+                suspect_object.moveTo(self.location)
+                print(f"{suspect_object} has been called to the {self.location}")
+                # move suspect to location
+                weapon = input("""What weapon did they use? 
+The weapons are: Candlestick, Dagger, Revolver, Lead pipe, Wrench, Rope""")
+                # case insensitive
+                self.gatherResponses([suspect_object.name, self.location.name, weapon], playerList.copy())
         else:
-            suspect = input("which character would you like to suggest (simply type the color)?")
-            suspect_object = get_object_by_name(suspect)
-            suspect_object.moveTo(self.location)
-            print(f"{suspect_object} has been called to the {self.location}")
-            # move suspect to location
-            weapon = input("what weapon did they use?")
-            # case insensitive
-            self.gatherResponses([suspect_object.name, self.location.name, weapon], playerList.copy())
+            print("You cannot make a suggestion in here!")
+        accuseAction = input(f"""{self.name}, would you like to make an accusation?
+Remember, if your accusation is wrong, you will be eliminated!
+Type 'yes' to make an accusation or 'notebook' to review your notebook. enter nothing to pass the turn.""")
+        if accuseAction == "notebook":
+            self.displayNotebook()
+            accuseAction = input("enter 'yes' to make an accusation, or nothing to pass the turn")
+        if accuseAction == "yes":
+            finalAccusation = False
+            while not finalAccusation:
+                suspect = input("which character would you like to accuse (simply type the color)?")
+                suspect_object = get_object_by_name(suspect)
+                weapon = input("""What weapon did they use? 
+    The weapons are: Candlestick, Dagger, Revolver, Lead pipe, Wrench, Rope""")
+                room = input("""What room did it happen in?
+    The rooms are: Study, Kitchen, Ballroom, Conservatory, Billiard Room,
+                              Library, Hall, Lounge, Dining Room""")
+                sure = input(f"""Your accusation is: {suspect_object.name}, in the {room}, with the {weapon}.
+    Would you like to submit this as your final accusation? 
+    enter 'yes' to confirm, any key to edit, or 'cancel' to cancel accusation.""")
+                if sure == "yes":
+                    self.accuse([suspect_object.name,room,weapon])
+                    finalAccusation = True
+                elif sure == "cancel":
+                    finalAccusation = True
+                    print("passing the turn...")
             # has someone responded? == False
             # for player in list (if HSR? == False)
                 # chance to respond
@@ -130,7 +165,9 @@ You are in {self.location}!""")
         # if no offer to accuse
 
     def gatherResponses(self, suggestion, players):
-        players.remove(self)
+        players = list(players)
+        selfIndex = players.index(self)
+        players = players[selfIndex+1:] + players[:selfIndex]
         for player in players:
             options = []
             for card in player.hand:
@@ -170,9 +207,11 @@ Which card would you like to show {self.name}?""")
 
     def accuse(self,suggestion):
         if suggestion == envelope:
-            print("you win!")
+            print(f"You guessed {envelope} correctly! You win!")
+            g['gameOver'] = True
         else:
-            print("you guessed wrong! you are king of lose mountain")
+            print(f"{self.name} guessed wrong and is out of the game!")
+            self.eliminated = True
 
 class Deck:
 
@@ -201,10 +240,11 @@ class Deck:
 class Place:
 
     # constructor
-    def __init__(self, name):
+    def __init__(self, name, canSuggest = True):
         self.name = name
         self.paths = {}
         self.players = []
+        self.canSuggest = canSuggest
 
     def __str__(self):
         return self.name
@@ -229,11 +269,10 @@ class Place:
                     'south': 'north', 'east': 'west', 'west': 'east'}
         destination.connectOneWay(opposite[direction], self)
 
-
 deck = Deck()
-envelope = deck.prepPerp(random.choice(deck.playercards),random.choice(deck.roomcards),random.choice(deck.weaponcards))
-print(envelope)
 
+
+envelope = deck.prepPerp(random.choice(deck.playercards),random.choice(deck.roomcards),random.choice(deck.weaponcards))
 scarletStart = Place("Miss Scarlet Start")
 mustardStart = Place("Colonel Mustard Start")
 greenStart = Place("Mr. Green Start")
@@ -251,13 +290,13 @@ hall = Place("Hall")
 lounge = Place("Lounge")
 diningRoom = Place("Dining Room")
 
-corridor1 = Place("Corridor")
-corridor2 = Place("Corridor")
-corridor3 = Place("Corridor")
-corridor4 = Place("Corridor")
+corridor1 = Place("Corridor", canSuggest=False)
+corridor2 = Place("Corridor", canSuggest=False)
+corridor3 = Place("Corridor", canSuggest=False)
+corridor4 = Place("Corridor", canSuggest=False)
 
 scarlet = Player("Miss Scarlet", corridor1)
-peacock = Player("Miss Peacock", corridor2)
+peacock = Player("Mrs. Peacock", corridor2)
 mustard = Player("Colonel Mustard", corridor3)
 green = Player("Mr. Green", corridor3)
 white = Player("Mrs. White", corridor4)
@@ -265,6 +304,22 @@ plum = Player("Prof. Plum", corridor1)
 
 playerList = {scarlet,peacock,plum,mustard,green,white}
 
+corridor1.connect("south", corridor2)
+corridor2.connect("south", corridor3)
+corridor3.connect("south", corridor4)
+
+corridor1.connect("east", lounge)
+corridor1.connect("west", study)
+corridor1.connect("north", hall)
+
+corridor2.connect("east", library)
+corridor2.connect("west", diningRoom)
+
+corridor3.connect("east", ballroom)
+corridor3.connect("west", billiardRoom)
+
+corridor4.connect("east", kitchen)
+corridor4.connect("west", conservatory)
 # dealing cards:
 
 for player in playerList:
@@ -334,21 +389,7 @@ def get_object_by_name(object_name):
 
 # connecting the board
 
-corridor1.connect("south", corridor2)
-corridor2.connect("south", corridor3)
-corridor3.connect("south", corridor4)
 
-corridor1.connect("east", lounge)
-corridor1.connect("west", study)
-
-corridor2.connect("east", library)
-corridor2.connect("west", diningRoom)
-
-corridor3.connect("east", ballroom)
-corridor3.connect("west", billiardRoom)
-
-corridor4.connect("east", kitchen)
-corridor4.connect("west", conservatory)
 
 #lounge.connect("secret passage", conservatory)
 #study.connect("secret passage", kitchen)
