@@ -1,5 +1,11 @@
 import random
 
+# Zeke Ash
+# Intermediate Python - Conference Project
+# 12.15.23
+
+# Welcome to HINT: A text-based mystery game for 1-6 Players
+
 #gameplay:
 # put players in starting locations
 # select envelope and deal out cards
@@ -13,50 +19,38 @@ import random
 #    if accuse:
 #       check middle
 
-## jim suggests maybe making a setup or test command
+
 public_log = []
 
 g = {}
-# player who asked what -> player who responded, if anyone. players who didn't respond.
 
-
+# run the file and enter main() to play game
+# character objects are listed at the bottom, feel free to toggle humanPlayer.
 
 def main():
     # setup goes here
-    #playerOrder = playerList
     g['gameOver'] = False
     # enter some rules
-    #beginning of the turn
+    # beginning of the turn
     while not g['gameOver']:
         for player in playerList.copy():
             if not g['gameOver']:
                 if not player.eliminated:
-                    player.playerTurn()
-
-## private log
-
-# the notebook
-# what you've shown
-
-#class Board:
-
-#    def __init__(self):
-#        self.rooms =
-        #self.playerOrder = players in game (start w miss scarlet)
-
- #   def showBoard(self):
- #       ...
-
+                    if player.humanPlayer:
+                        player.playerTurn()
+                    else:
+                        player.aiTurn()
 
 class Player:
 
-    def __init__(self, name, location, eliminated=False):
+    def __init__(self, name, location, eliminated=False,humanPlayer=True):
         self.name = name
         self.location = location
         self.location.players.append(self)
         self.notebook = self.createNotebook(deck)
         self.hand = []
         self.eliminated = eliminated
+        self.humanPlayer = humanPlayer
 
     def __str__(self):
         return self.name
@@ -80,9 +74,6 @@ class Player:
     def getInfo(self):
         return f"I am {self.name}. I am currently in {self.location}."
 
-    def getHand(self):
-        ...
-
     def moveTo(self, newLocation):
         self.location.players.remove(self)
         newLocation.players.append(self)
@@ -95,9 +86,6 @@ class Player:
             print(f"I don't see how to go {direction} from here.")
         else:
             destination = self.location.paths[direction]
-            #if not destination.accepts(self):
-            #    print(f"I'm not allowed to go to {destination}")
-            #else:
             print(f"{self} moves from {self.location} to {destination}")
             self.moveTo(destination)
 
@@ -105,8 +93,6 @@ class Player:
         return [player,room,weapon]
 
     def playerTurn(self):
-        # need to include something about moving
-        # after entering a new location:
         # tell player possible moves and current location
         print(f"""It is your turn, {self.name}! 
 You are in {self.location}!""")
@@ -118,10 +104,19 @@ You are in {self.location}!""")
         # check if you are in a room where you can suggest/accuse
         if self.location.canSuggest:
             suggestAction = input(f"""You have {self.hand} in your hand.
-Would you like to make a suggestion (type 'yes' if so)?""")
-            if suggestAction != "yes":
-                print("passing turn...")
-            else:
+Would you like to make a suggestion (type 'yes' if so, 'notebook' if you would like to look at your notebook, 
+    "log" to look at public log, or any key to pass)?""")
+            if suggestAction != "yes" and suggestAction != "notebook" and suggestAction != "log":
+                pass
+                #print("passing turn...")
+            elif suggestAction == 'notebook':
+                self.displayNotebook()
+                suggestAction = input("enter 'yes' to make a suggestion, or nothing to pass the turn")
+            elif suggestAction == "log":
+                for s in public_log:
+                    print(s)
+                suggestAction = input("enter 'yes' to make a suggestion, or nothing to pass the turn")
+            if suggestAction == 'yes':
                 suspect = input("which character would you like to suggest (simply type the color)?")
                 suspect_object = get_object_by_name(suspect)
                 suspect_object.moveTo(self.location)
@@ -164,6 +159,21 @@ Type 'yes' to make an accusation or 'notebook' to review your notebook. enter no
                 # if response, HSR? == True
         # if no offer to accuse
 
+    def aiTurn(self):
+        print(f"It is {self.name}'s turn!")
+        direction = random.choice(list(self.location.paths.keys()))
+        self.go(direction)
+        if self.location.canSuggest:
+            suspect = random.choice(deck.playercards)
+            weapon = random.choice(deck.weaponcards)
+            print(f"{self.name} suggested: {suspect} in the {self.location.name} with the {weapon}.")
+            self.gatherResponses([suspect, self.location.name, weapon], playerList.copy())
+        if random.randrange(1,30) == 30:
+            suspect = random.choice(deck.playercards)
+            weapon = random.choice(deck.weaponcards)
+            room = random.choice(deck.roomcards)
+            self.accuse([suspect,room,weapon])
+
     def gatherResponses(self, suggestion, players):
         players = list(players)
         selfIndex = players.index(self)
@@ -175,17 +185,33 @@ Type 'yes' to make an accusation or 'notebook' to review your notebook. enter no
                     options.append(card)
         # if player not human, random.choice(options) (or something smarter)
             if len(options) > 1:
+                if not player.humanPlayer:
+                    shownCard = random.choice(options)
+                    self.updateNotebook(shownCard, player.name, "x")
+                    if self.humanPlayer:
+                        print(f"{player} shows the card {options[0]}.")
+                    else:
+                        print(f"{player} shows a card.")
+                    public_log.append(f"""{self.name} suggested, {suggestion}.
+{player.name} showed something""")
+                    return shownCard
                 cue = input(f"{player}, you have some of the suggested cards. Press any key to choose one to show.")
                 print(options)
                 shownCard = input(f"""{self.name} suggested {suggestion}. You have {options}.
 Which card would you like to show {self.name}?""")
                 self.updateNotebook(shownCard, player.name, "x")
-                print(f"{player} shows the card {options[0]}.")
+                if self.humanPlayer:
+                    print(f"{player} shows the card {options[0]}.")
+                else:
+                    print(f"{player} shows a card.")
                 public_log.append(f"""{self.name} suggested, {suggestion}.
 {player.name} showed something""")
                 return shownCard
             elif len(options) == 1:
-                print(f"{player} shows the card {options[0]}.")
+                if self.humanPlayer:
+                    print(f"{player} shows the card {options[0]}.")
+                else:
+                    print(f"{player} showed a card.")
                 self.updateNotebook(options[0],player.name,"x")
                 public_log.append(f"""{self.name} suggested, {suggestion}.
 {player.name} showed something""")
@@ -212,6 +238,13 @@ Which card would you like to show {self.name}?""")
         else:
             print(f"{self.name} guessed wrong and is out of the game!")
             self.eliminated = True
+            playersLeft = []
+            for player in playerList.copy():
+                if not player.eliminated:
+                    playersLeft.append(player)
+            if len(playersLeft) == 1:
+                print(f"{playersLeft[0]} is the last player standing! Congratulations {playersLeft[0]}!")
+                g['gameOver'] = True
 
 class Deck:
 
@@ -232,10 +265,7 @@ class Deck:
         self.deck.remove(weapon)
         return [player,room,weapon]
 
-#    def dealCards(self,numPlayers):
-#        for i in range(len(self.deck)//numPlayers):
-            # player.hand = sel
-#        ...
+
 
 class Place:
 
@@ -269,8 +299,10 @@ class Place:
                     'south': 'north', 'east': 'west', 'west': 'east'}
         destination.connectOneWay(opposite[direction], self)
 
-deck = Deck()
 
+# set up board, cards, and characters
+
+deck = Deck()
 
 envelope = deck.prepPerp(random.choice(deck.playercards),random.choice(deck.roomcards),random.choice(deck.weaponcards))
 scarletStart = Place("Miss Scarlet Start")
@@ -296,11 +328,11 @@ corridor3 = Place("Corridor", canSuggest=False)
 corridor4 = Place("Corridor", canSuggest=False)
 
 scarlet = Player("Miss Scarlet", corridor1)
-peacock = Player("Mrs. Peacock", corridor2)
-mustard = Player("Colonel Mustard", corridor3)
-green = Player("Mr. Green", corridor3)
-white = Player("Mrs. White", corridor4)
-plum = Player("Prof. Plum", corridor1)
+peacock = Player("Mrs. Peacock", corridor2, humanPlayer=False)
+mustard = Player("Colonel Mustard", corridor3, humanPlayer=False)
+green = Player("Mr. Green", corridor3, humanPlayer=False)
+white = Player("Mrs. White", corridor4, humanPlayer=False)
+plum = Player("Prof. Plum", corridor1, humanPlayer=False)
 
 playerList = {scarlet,peacock,plum,mustard,green,white}
 
@@ -327,7 +359,7 @@ for player in playerList:
         card = random.choice(deck.deck)
         player.hand.append(card)
         deck.deck.remove(card)
-    print(f"{player}'s hand: {player.hand}")
+    #print(f"{player}'s hand: {player.hand}")
     for card in player.hand:
         player.updateNotebook(card,player.name,"x")
 
@@ -345,51 +377,4 @@ def get_object_by_name(object_name):
     else:
         return None
 
-#object_name_input = input("Enter the name of the object: ")
-#result_object = get_object_by_name(object_name_input)
-#print(result_object)
-#print(result_object.location)
-        
-#plum.notebook['Rope']['Miss Scarlet'] = 'x'
-#plum.notebook['Colonel Mustard']['Miss Scarlet'] = 'x'
-#plum.notebook['Colonel Mustard']['Mr. Green'] = 'o'
-#plum.notebook['Mr. Green']['Colonel Mustard']
-#plum.notebook['Colonel Mustard']['Miss Scarlet']
-#plum.notebook['Colonel Mustard']['Mr. Green']
 
-
-
-#plum.notebook['Colonel Mustard']['Miss Scarlet'] = 'o'
-#plum.notebook['Colonel Mustard']['Mr. Green'] = 'o'
-#plum.notebook['Colonel Mustard']['Colonel Mustard'] = 'o'
-#plum.notebook['Colonel Mustard']['Prof. Plum'] = 'o'
-#plum.notebook['Colonel Mustard']['Mrs. White'] = 'o'
-#plum.notebook['Colonel Mustard']['Mrs. Peacock'] = 'o'
-#plum.displayNotebook()
-
-
-        
-#for card in deck:
-#   for player in game:
-#       notebook[card][player] = "x" or "o" depending
-# return notebook
-
-
-# how your notebook should look:
-
-##  suspects:     me    p1      p2      p3
-##  Scarlet       x     o       o       o
-##  Mustard       o     o       x       o
-##  Plum          o     o       x       o
-
-##  weapons:
-##  Lead Pipe     o     o       o       o
-##  Wrench        o     x       o       o
-##  Candlestick   o     o       o       o
-
-# connecting the board
-
-
-
-#lounge.connect("secret passage", conservatory)
-#study.connect("secret passage", kitchen)
